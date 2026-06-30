@@ -1,12 +1,12 @@
 # VideoFixer
 
-Version: 1.2.0
+Version: 1.2.1
 
 A small Windows 10/11 interface for repairing videos with ffmpeg.
 
 Author: Luciano Villani
 
-![VideoFixer overview](assets/videofixer-banner.png)
+![VideoFixer app screenshot](assets/videofixer-screenshot.png)
 
 VideoFixer rebuilds damaged MP4 video streams into cleaner, Google Drive/browser-friendly MP4 files. It is designed for recordings that still play locally but fail to preview online because of H.264 reference-frame corruption.
 

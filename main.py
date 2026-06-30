@@ -16,7 +16,7 @@ from tkinter import ttk
 
 
 APP_NAME = "VideoFixer"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 AUTHOR = "Luciano Villani"
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 VIDEO_TYPES = (
