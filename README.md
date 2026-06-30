@@ -4,7 +4,7 @@
   <img src="assets/videofixer-icon.png" width="120" alt="VideoFixer icon">
 </p>
 
-Version: 1.2.2
+Version: 1.2.3
 
 A small Windows 10/11 interface for repairing videos with ffmpeg.
 
@@ -24,6 +24,7 @@ VideoFixer rebuilds damaged MP4 video streams into cleaner, Google Drive/browser
 - When a video is selected, the output folder field is filled with the video's folder.
 - Choose Software, Auto GPU, NVIDIA, Intel, or AMD encoding.
 - The app recommends Software or GPU based on the detected graphics hardware and ffmpeg support.
+- If GPU encoding fails at runtime, the app automatically retries with Software encoding.
 - The Start button is enabled only after the required choices are made.
 - Choose an output folder, or leave it empty to save beside the original video.
 - Saves output as `original-name-fixed.ext`.

@@ -16,7 +16,7 @@ from tkinter import ttk
 
 
 APP_NAME = "VideoFixer"
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 AUTHOR = "Luciano Villani"
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 VIDEO_TYPES = (
@@ -484,36 +484,20 @@ class VideoFixer(tk.Tk):
             output_file = output_path_for(input_file, output_dir)
             Path(output_file).parent.mkdir(parents=True, exist_ok=True)
 
+            selected_encoder = self.encoder.get()
             command = self._ffmpeg_command(ffmpeg_path, input_file, output_file)
-            self.events.put(("progress", 0))
-
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-            )
-
-            last_progress = 0.0
-            log_tail = []
-            assert process.stdout is not None
-            for line in process.stdout:
-                line = line.strip()
-                if line:
-                    log_tail.append(line)
-                    log_tail = log_tail[-12:]
-                percent = self._progress_from_line(line, duration)
-                if percent is not None and percent >= last_progress:
-                    last_progress = min(percent, 99.0)
-                    self.events.put(("progress", last_progress))
-
-            code = process.wait()
-            if code != 0:
-                detail = "\n".join(log_tail[-6:]) or "ffmpeg exited with an error."
+            code, log_tail = self._run_ffmpeg(command, duration)
+            if code != 0 and selected_encoder != "software":
+                first_error = "\n".join(log_tail[-10:])
+                self.events.put(("status", "GPU encoding failed. Retrying with Software..."))
+                self.events.put(("progress", 0))
+                command = self._ffmpeg_command(ffmpeg_path, input_file, output_file, selected_encoder="software")
+                code, log_tail = self._run_ffmpeg(command, duration)
+                if code != 0:
+                    detail = "\n".join(log_tail[-14:]) or first_error or "ffmpeg exited with an error."
+                    raise RuntimeError("GPU retry and Software fallback both failed:\n\n" + detail)
+            elif code != 0:
+                detail = "\n".join(log_tail[-14:]) or "ffmpeg exited with an error."
                 raise RuntimeError(detail)
 
             self.events.put(("progress", 100))
@@ -521,8 +505,36 @@ class VideoFixer(tk.Tk):
         except Exception as exc:
             self.events.put(("error", str(exc)))
 
-    def _ffmpeg_command(self, ffmpeg_path, input_file, output_file):
-        encoder_name, encoder_args = self._encoder_args(ffmpeg_path)
+    def _run_ffmpeg(self, command, duration):
+        self.events.put(("progress", 0))
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+
+        last_progress = 0.0
+        log_tail = []
+        assert process.stdout is not None
+        for line in process.stdout:
+            line = line.strip()
+            if line:
+                log_tail.append(line)
+                log_tail = log_tail[-30:]
+            percent = self._progress_from_line(line, duration)
+            if percent is not None and percent >= last_progress:
+                last_progress = min(percent, 99.0)
+                self.events.put(("progress", last_progress))
+
+        return process.wait(), log_tail
+
+    def _ffmpeg_command(self, ffmpeg_path, input_file, output_file, selected_encoder=None):
+        encoder_name, encoder_args = self._encoder_args(ffmpeg_path, selected_encoder=selected_encoder)
         self.events.put(("status", f"Repairing video with {encoder_name}..."))
         return [
             ffmpeg_path,
@@ -564,8 +576,8 @@ class VideoFixer(tk.Tk):
             output_file,
         ]
 
-    def _encoder_args(self, ffmpeg_path):
-        selected = self.encoder.get()
+    def _encoder_args(self, ffmpeg_path, selected_encoder=None):
+        selected = selected_encoder or self.encoder.get()
         encoders = self._available_video_encoders(ffmpeg_path)
 
         gpu_choices = [
