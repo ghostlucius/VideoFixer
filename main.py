@@ -14,9 +14,19 @@ from tkinter import filedialog, messagebox
 import tkinter as tk
 from tkinter import ttk
 
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+
+    DND_AVAILABLE = True
+    TK_BASE_CLASS = TkinterDnD.Tk
+except ImportError:
+    DND_FILES = None
+    DND_AVAILABLE = False
+    TK_BASE_CLASS = tk.Tk
+
 
 APP_NAME = "VideoFixer"
-APP_VERSION = "1.2.3"
+APP_VERSION = "1.2.4"
 AUTHOR = "Luciano Villani"
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 VIDEO_TYPES = (
@@ -186,7 +196,7 @@ def detected_gpu_names() -> list[str]:
     return []
 
 
-class VideoFixer(tk.Tk):
+class VideoFixer(TK_BASE_CLASS):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} {APP_VERSION}")
@@ -254,7 +264,8 @@ class VideoFixer(tk.Tk):
         panel = ttk.Frame(wrapper, style="Panel.TFrame", padding=20)
         panel.pack(fill="both", expand=True)
 
-        self._file_row(panel, "Video file", self.input_file, self._choose_video)
+        self.video_entry = self._file_row(panel, "Video file", self.input_file, self._choose_video)
+        self._enable_video_drop(self.video_entry)
         self._file_row(panel, "Output folder", self.output_folder, self._choose_output_folder, optional=True)
 
         ttk.Label(panel, text="Fix encoder", style="Panel.TLabel").pack(anchor="w", pady=(10, 8))
@@ -295,7 +306,7 @@ class VideoFixer(tk.Tk):
 
         footer = ttk.Label(
             wrapper,
-            text="If ffmpeg is missing, the app asks before downloading it for this user only.",
+            text="Drop a video on the Video file field, or use Choose. If ffmpeg is missing, the app asks before downloading it.",
             style="Sub.TLabel",
         )
         footer.pack(anchor="w", pady=(12, 0))
@@ -310,6 +321,28 @@ class VideoFixer(tk.Tk):
         ttk.Button(row, text=button_text, command=command).pack(side="left", padx=(10, 0))
         if optional:
             ttk.Button(row, text="Same folder", command=self._use_same_folder).pack(side="left", padx=(8, 0))
+        return entry
+
+    def _enable_video_drop(self, widget):
+        if not DND_AVAILABLE:
+            return
+        widget.drop_target_register(DND_FILES)
+        widget.dnd_bind("<<Drop>>", self._drop_video)
+
+    def _drop_video(self, event):
+        paths = self.tk.splitlist(event.data)
+        if not paths:
+            return
+        path = str(Path(paths[0]))
+        if not Path(path).is_file():
+            messagebox.showwarning(APP_NAME, "Please drop a valid video file.")
+            return
+        self._set_video_path(path)
+
+    def _set_video_path(self, path):
+        self.input_file.set(path)
+        self.output_folder.set(str(Path(path).parent))
+        self.status.set("Ready.")
 
     def _use_same_folder(self):
         input_file = self.input_file.get().strip()
@@ -410,9 +443,7 @@ class VideoFixer(tk.Tk):
     def _choose_video(self):
         path = filedialog.askopenfilename(title="Select video", filetypes=VIDEO_TYPES)
         if path:
-            self.input_file.set(path)
-            self.output_folder.set(str(Path(path).parent))
-            self.status.set("Ready.")
+            self._set_video_path(path)
 
     def _choose_output_folder(self):
         path = filedialog.askdirectory(title="Select output folder")

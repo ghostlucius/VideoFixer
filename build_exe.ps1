@@ -7,7 +7,7 @@ if (-not (Test-Path $venvPython)) {
 
 $pyInstallerAvailable = $false
 try {
-    & $venvPython -c "import PyInstaller" *> $null
+    & $venvPython -c "import PyInstaller, tkinterdnd2" *> $null
     $pyInstallerAvailable = $LASTEXITCODE -eq 0
 }
 catch {
@@ -15,10 +15,10 @@ catch {
 }
 
 if (-not $pyInstallerAvailable) {
-    & $venvPython -m pip install pyinstaller
+    & $venvPython -m pip install pyinstaller tkinterdnd2
 }
 
-& $venvPython -m PyInstaller --noconsole --onefile --name VideoFixer --icon assets\videofixer.ico --add-data "assets;assets" main.py
+& $venvPython -m PyInstaller --noconsole --onefile --name VideoFixer --icon assets\videofixer.ico --add-data "assets;assets" --collect-all tkinterdnd2 main.py
 
 if (-not (Test-Path (Join-Path $PSScriptRoot "dist\VideoFixer.exe"))) {
     throw "Build failed: dist\VideoFixer.exe was not created."
