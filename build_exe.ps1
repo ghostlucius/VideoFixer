@@ -18,7 +18,7 @@ if (-not $pyInstallerAvailable) {
     & $venvPython -m pip install pyinstaller
 }
 
-& $venvPython -m PyInstaller --noconsole --onefile --name VideoFixer main.py
+& $venvPython -m PyInstaller --noconsole --onefile --name VideoFixer --icon assets\videofixer.ico --add-data "assets;assets" main.py
 
 if (-not (Test-Path (Join-Path $PSScriptRoot "dist\VideoFixer.exe"))) {
     throw "Build failed: dist\VideoFixer.exe was not created."

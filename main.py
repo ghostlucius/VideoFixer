@@ -16,7 +16,7 @@ from tkinter import ttk
 
 
 APP_NAME = "VideoFixer"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 AUTHOR = "Luciano Villani"
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 VIDEO_TYPES = (
@@ -29,6 +29,11 @@ VIDEO_TYPES = (
 def app_data_dir() -> Path:
     base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
     return Path(base) / "VideoFixer"
+
+
+def resource_path(relative_path: str) -> Path:
+    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return base_path / relative_path
 
 
 def bundled_ffmpeg_dir() -> Path:
@@ -185,6 +190,7 @@ class VideoFixer(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} {APP_VERSION}")
+        self._set_window_icon()
         self._size_to_screen()
         self.minsize(760, 560)
         self.resizable(True, True)
@@ -208,6 +214,14 @@ class VideoFixer(tk.Tk):
         self._wire_validation()
         self._update_form_state()
         self.after(100, self._process_events)
+
+    def _set_window_icon(self):
+        icon_path = resource_path("assets/videofixer.ico")
+        if icon_path.exists():
+            try:
+                self.iconbitmap(str(icon_path))
+            except tk.TclError:
+                pass
 
     def _style(self):
         style = ttk.Style(self)
